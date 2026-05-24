@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "Service": {
+      "title": "Service",
+      "description": "Beauty services offered by the boutique",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "duration": { "type": "number", "description": "Duration in minutes" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["name", "description", "price", "duration"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Beauty products available for sale",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["name", "description", "price"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Booking details for a service",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["serviceId", "date", "time", "customerName", "customerEmail"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Contact form submissions",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "message"]
+    }
+  },
+  "firestore": {
+    "services": {
+      "schema": "Service",
+      "description": "Public list of beauty services"
+    },
+    "products": {
+      "schema": "Product",
+      "description": "Public list of beauty products"
+    },
+    "appointments": {
+      "schema": "Appointment",
+      "description": "User appointments"
+    },
+    "inquiries": {
+      "schema": "Inquiry",
+      "description": "General customer inquiries"
+    }
+  }
+}
