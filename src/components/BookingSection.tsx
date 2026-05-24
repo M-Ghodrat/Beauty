@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { auth, db, signInWithGoogle, handleFirestoreError } from '../firebase';
+import { auth, db, signInWithGoogle } from '../firebase';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { SERVICES } from '../constants';
-import { Calendar as CalendarIcon, Clock, CheckCircle2, User, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, CheckCircle2, User, Sparkles, LogIn, Chrome, ShieldAlert, BadgeCheck } from 'lucide-react';
+import AuthModal from './AuthModal';
 
 export default function BookingSection() {
   const [step, setStep] = useState(1);
@@ -14,13 +15,19 @@ export default function BookingSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [services, setServices] = useState(SERVICES);
+  const [isLocalAuthOpen, setIsLocalAuthOpen] = useState(false);
+  const [localAuthTab, setLocalAuthTab] = useState<'signin' | 'signup'>('signin');
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
 
   const timeSlots = ['09:00', '10:30', '12:00', '13:30', '15:00', '16:30'];
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
+      setIsUserLoggedIn(!!user);
       if (user) {
         setUserDetails({ name: user.displayName || '', email: user.email || '' });
+      } else {
+        setUserDetails({ name: '', email: '' });
       }
     });
     return () => unsubscribe();
@@ -64,6 +71,16 @@ export default function BookingSection() {
       setError('Booking failed. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleLocalGoogleSignIn = async () => {
+    try {
+      setError('');
+      await signInWithGoogle();
+    } catch (err: any) {
+      console.error(err);
+      setError('Google instant sign in failed.');
     }
   };
 
@@ -150,37 +167,95 @@ export default function BookingSection() {
           {step === 3 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
               <div className="max-w-md mx-auto text-center">
-                <h4 className="text-2xl font-light mb-8">Your Information</h4>
-                <div className="space-y-4">
-                  <div className="text-left">
-                    <label className="text-[10px] uppercase font-bold text-gray-400 block mb-2 px-1">Full Name</label>
-                    <input 
-                      type="text" 
-                      value={userDetails.name}
-                      onChange={e => setUserDetails({...userDetails, name: e.target.value})}
-                      placeholder="Jane Doe"
-                      className="input-field"
-                    />
+                {error && (
+                  <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-500 text-xs flex gap-2 items-center justify-center">
+                    <ShieldAlert size={16} />
+                    <span>{error}</span>
                   </div>
-                  <div className="text-left">
-                    <label className="text-[10px] uppercase font-bold text-gray-400 block mb-2 px-1">Email Address</label>
-                    <input 
-                      type="email" 
-                      value={userDetails.email}
-                      onChange={e => setUserDetails({...userDetails, email: e.target.value})}
-                      placeholder="jane@example.com"
-                      className="input-field"
-                    />
-                  </div>
-                </div>
+                )}
 
-                <button 
-                  onClick={handleBooking}
-                  disabled={isSubmitting || !userDetails.name || !userDetails.email}
-                  className="pill-button-accent w-full py-5 mt-10 disabled:opacity-30"
-                >
-                  {isSubmitting ? 'Reserving...' : 'Finalize Appointment'}
-                </button>
+                {isUserLoggedIn ? (
+                  <>
+                    <div className="mb-6 flex items-center justify-center gap-2 text-emerald-600 bg-emerald-50 py-3 px-4 rounded-xl mx-auto w-fit text-xs font-semibold">
+                      <BadgeCheck size={16} />
+                      <span>Verified Profile Session Active</span>
+                    </div>
+
+                    <h4 className="text-2xl font-light mb-8">Confirm Your Details</h4>
+                    <div className="space-y-4">
+                      <div className="text-left">
+                        <label className="text-[10px] uppercase font-bold text-gray-400 block mb-2 px-1">Full Name</label>
+                        <input 
+                          type="text" 
+                          value={userDetails.name}
+                          onChange={e => setUserDetails({...userDetails, name: e.target.value})}
+                          placeholder="Jane Doe"
+                          className="input-field"
+                        />
+                      </div>
+                      <div className="text-left">
+                        <label className="text-[10px] uppercase font-bold text-gray-400 block mb-2 px-1">Email Address</label>
+                        <input 
+                          type="email" 
+                          value={userDetails.email}
+                          onChange={e => setUserDetails({...userDetails, email: e.target.value})}
+                          placeholder="jane@example.com"
+                          className="input-field"
+                        />
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={handleBooking}
+                      disabled={isSubmitting || !userDetails.name || !userDetails.email}
+                      className="pill-button-accent w-full py-5 mt-10 disabled:opacity-30"
+                    >
+                      {isSubmitting ? 'Reserving...' : 'Finalize Appointment'}
+                    </button>
+                  </>
+                ) : (
+                  <div className="py-6 px-4">
+                    <div className="w-16 h-16 rounded-full bg-brand-accent/10 flex items-center justify-center mx-auto mb-6">
+                      <User size={28} className="text-brand-accent" />
+                    </div>
+                    <h3 className="text-2xl font-serif mb-3">Identity Verification Required</h3>
+                    <p className="text-sm text-gray-500 mb-8 max-w-sm mx-auto">
+                      Lumina requires a verified profile to guarantee appointments and avoid automated spam scheduling.
+                    </p>
+
+                    <div className="space-y-3.5">
+                      <button 
+                        onClick={handleLocalGoogleSignIn}
+                        className="w-full flex items-center justify-center gap-2.5 p-4 rounded-full border border-gray-100 hover:bg-gray-50 transition-all font-medium text-xs text-gray-600 shadow-sm"
+                      >
+                        <Chrome size={16} className="text-[#4285F4]" />
+                        <span>Verify Instantly via Google (Gmail)</span>
+                      </button>
+
+                      <div className="relative my-4 text-center">
+                        <hr className="border-gray-100" />
+                        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-[10px] uppercase tracking-widest text-gray-400">
+                          Or use pass credentials
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <button 
+                          onClick={() => { setLocalAuthTab('signin'); setIsLocalAuthOpen(true); }}
+                          className="py-3 bg-brand-ink text-white rounded-full text-xs font-semibold hover:bg-black transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <LogIn size={14} /> Profile Sign In
+                        </button>
+                        <button 
+                          onClick={() => { setLocalAuthTab('signup'); setIsLocalAuthOpen(true); }}
+                          className="py-3 bg-brand-mute hover:opacity-90 rounded-full text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                        >
+                          Register Profile
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -205,6 +280,13 @@ export default function BookingSection() {
 
         </div>
       </div>
+
+      {/* Local Auth Modal triggers */}
+      <AuthModal 
+        isOpen={isLocalAuthOpen} 
+        onClose={() => setIsLocalAuthOpen(false)} 
+        initialTab={localAuthTab} 
+      />
     </section>
   );
 }
